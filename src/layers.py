@@ -43,7 +43,7 @@ class GatedConv2d(nn.Module):
                 num_features=out_channels,
             )
 
-        self._activation = activation
+        self._activation = activation if (activation is not None) else (lambda x: x)
         self._batch_norm_flag = batch_norm
 
         for module in self.modules():
