@@ -10,7 +10,7 @@ class GatedConv2d(nn.Module):
                        out_channels: int,
                        kernel_size: Union[int, Tuple[int, int]],
                        stride: Union[int, Tuple[int, int]] = 1,
-                       padding: Union[int, Tuple[int, int]] = 0,
+                       padding: Union[int, str, Tuple[int, int]] = 0,
                        dilation: Union[int, Tuple[int, int]] = 1,
                        batch_norm: bool = True,
                        activation: nn.Module = nn.LeakyReLU(negative_slope=0.2),
