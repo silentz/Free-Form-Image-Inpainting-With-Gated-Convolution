@@ -71,3 +71,39 @@ class GatedUpsampleConv2d(GatedConv2d):
         scaled = F.interpolate(input, scale_factor=self._scale_factor)
         result = super().forward(scaled)
         return result
+
+
+class SpectralNormConv2d(nn.Module):
+
+    def __init__(self, in_channels: int,
+                       out_channels: int,
+                       kernel_size: Union[int, Tuple[int, int]],
+                       stride: Union[int, Tuple[int, int]] = 1,
+                       padding: Union[int, str, Tuple[int, int]] = 0,
+                       dilation: Union[int, Tuple[int, int]] = 1,
+                       activation: nn.Module = nn.LeakyReLU(negative_slope=0.2),
+                ):
+        super().__init__()
+
+        self._conv = nn.Conv2d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                groups=1,
+                bias=True,
+            )
+
+        self._conv = nn.utils.spectral_norm(self._conv)
+        self._activation = activation
+
+        for module in self.modules():
+            if isinstance(module, nn.Conv2d):
+                nn.init.xavier_normal_(module.weight)
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        out = self._conv(input)
+        out = self._activation(out)
+        return out
