@@ -142,3 +142,30 @@ class Generator(nn.Module):
         X_refine = torch.clamp(X_refine, -1, 1)
 
         return self._denormalize(X_coarse), self._denormalize(X_refine), attn_map
+
+
+class Discriminator(nn.Module):
+
+    def __init__(self, channels: int = 4):
+        super().__init__()
+
+        self._in_channels = channels
+        self._channels = 64
+
+        self._layers = nn.Sequential(
+                SpectralNormConv2d(in_channels=self._in_channels, out_channels=self._channels,
+                                   kernel_size=4, stride=2, padding=1),
+                SpectralNormConv2d(in_channels=self._channels, out_channels=self._channels * 2,
+                                   kernel_size=4, stride=2, padding=1),
+                SpectralNormConv2d(in_channels=self._channels * 2, out_channels=self._channels * 4,
+                                   kernel_size=4, stride=2, padding=1),
+                SpectralNormConv2d(in_channels=self._channels * 4, out_channels=self._channels * 4,
+                                   kernel_size=4, stride=2, padding=1),
+                SpectralNormConv2d(in_channels=self._channels * 4, out_channels=self._channels * 4,
+                                   kernel_size=4, stride=2, padding=1),
+                SpectralNormConv2d(in_channels=self._channels * 4, out_channels=self._channels * 4,
+                                   kernel_size=4, stride=2, padding=1),
+            )
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return self._layers(input)
