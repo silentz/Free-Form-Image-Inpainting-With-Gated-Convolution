@@ -107,3 +107,61 @@ class SpectralNormConv2d(nn.Module):
         out = self._conv(input)
         out = self._activation(out)
         return out
+
+
+class SelfAttention(nn.Module):
+
+    def __init__(self, channels: int):
+        super().__init__()
+
+        self._in_channels  = channels
+        self._out_channels = channels // 8
+
+        self._conv_query = nn.Conv2d(
+                in_channels=self._in_channels,
+                out_channels=self._out_channels,
+                kernel_size=1,
+            )
+
+        self._conv_key = nn.Conv2d(
+                in_channels=self._in_channels,
+                out_channels=self._out_channels,
+                kernel_size=1,
+            )
+
+        self._conv_value = nn.Conv2d(
+                in_channels=self._in_channels,
+                out_channels=self._in_channels,
+                kernel_size=1,
+            )
+
+        self._gamma = nn.Parameter(
+                data=torch.zeros(1),
+            )
+
+    def forward(self, input: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        batch_size, channels, height, width = input.shape
+
+        # query, key, value
+        query = self._conv_query(input) # [batch, ch / 8, h, w]
+        key   = self._conv_key(input)   # [batch, ch / 8, h, w]
+        value = self._conv_value(input) # [batch, ch, h, w]
+
+        # reshape query, key, value
+        query = query.view(batch_size, -1, height * width) # [batch, ch / 8, h * w]
+        key   = key.view(batch_size, -1, height * width)   # [batch, ch / 8, h * w]
+        value = value.view(batch_size, -1, height * width) # [batch, ch, h * w]
+
+        # attention map
+        query_T = query.permute(0, 2, 1)          # [batch, h * w, ch / 8]
+        energy = torch.bmm(query_T, key)          # [batch, h * w, h * w]
+        attention = torch.softmax(energy, dim=-1) # [batch, h * w, h * w]
+
+        # self-attention output
+        attention_T = attention.permute(0, 2, 1)
+        result = torch.bmm(value, attention_T)
+        result = result.view(batch_size, channels, height, width)
+
+        # gamma parameter
+        output = self._gamma * result + input
+        return output, attention
