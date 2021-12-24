@@ -5,6 +5,7 @@ import torchvision
 
 from torch.utils.data import Dataset
 from typing import Any, Dict, Callable
+from .mask import generate_random_mask
 
 
 _datasets = {
@@ -37,8 +38,7 @@ class Downloadable:
 class Places(Dataset, Downloadable):
 
     def __init__(self, root: str,
-                       split: str,
-                       transform: Callable):
+                       split: str):
         target =  _datasets['places365']['target']
         archive = _datasets['places365']['archive']
         link =    _datasets['places365']['url']
@@ -50,7 +50,6 @@ class Places(Dataset, Downloadable):
 
         self._root = os.path.join(root, target)
         self._meta = meta
-        self._transform = transform
 
     def __len__(self) -> int:
         return len(self._meta)
@@ -64,3 +63,17 @@ class Places(Dataset, Downloadable):
             )
         result = {'image': image}
         return result
+
+
+class PlacesWithMask(Places):
+
+    def __getitem__(self, idx: int) -> Dict[str, Any]:
+        image = super().__getitem__(idx)['image']
+        height, width = image.shape[1], image.shape[2]
+        mask = generate_random_mask(height, width)
+
+        return {
+                'image': image,
+                'mask': mask,
+            }
+
