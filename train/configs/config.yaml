@@ -1,0 +1,35 @@
+seed_everything: 42
+
+trainer:
+  gpus: 1
+  callbacks: null
+  accumulate_grad_batches: null
+  max_epochs: 50
+  val_check_interval: 1.0
+  precision: 32
+  num_sanity_val_steps: 2
+  deterministic: false
+  auto_lr_find: false
+
+model:
+  gen_optimizer_lr: 0.0001
+  dis_optimizer_lr: 0.0004
+  n_examples: 5
+
+data:
+  train_dataset:
+    class_path: src.dataset.PlacesWithMask
+    init_args:
+      root: data/
+      split: train
+  train_batch_size: 4
+  train_num_workers: 16
+
+  val_dataset:
+    class_path: src.dataset.PlacesWithMask
+    init_args:
+      root: data/
+      split: val
+  val_batch_size: 4
+  val_num_workers: 16
+
