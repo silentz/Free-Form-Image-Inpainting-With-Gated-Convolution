@@ -46,12 +46,10 @@ class DataModule(pl.LightningDataModule):
 class Module(pl.LightningModule):
 
     def __init__(self, gen_optimizer_lr: float,
-                       dis_optimizer_lr: float,
-                       n_examples: int):
+                       dis_optimizer_lr: float):
         super().__init__()
         self.gen_optimizer_lr = gen_optimizer_lr
         self.dis_optimizer_lr = dis_optimizer_lr
-        self.n_examples = n_examples
 
         self.generator = Generator()
         self.discriminator = Discriminator()
