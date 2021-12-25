@@ -11,6 +11,19 @@ trainer:
   limit_val_batches: 4
   deterministic: false
   auto_lr_find: false
+  callbacks:
+    - class_path: pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint
+      init_args:
+        dirpath: checkpoints/
+        filename: "{epoch:02d}-{gen_all_loss:.5f}"
+        monitor: gen_all_loss
+        mode: min
+        save_top_k: -1
+  logger:
+    class_path: pytorch_lightning.loggers.WandbLogger
+    init_args:
+      project: inpainting
+      save_dir: lightning_logs/
 
 model:
   gen_optimizer_lr: 0.0001
