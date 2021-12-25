@@ -63,7 +63,7 @@ class Module(pl.LightningModule):
 
     def training_step(self, batch: Batch, batch_idx: int, optimizer_idx: int) -> Dict[str, Any]:
         images = batch.images
-        masks = batch.masks
+        masks = batch.masks.unsqueeze(dim=1)
 
         X_coarse, X_recon, _ = self.generator(images, masks)
         X_complete = X_recon * masks + images * (1 - masks)
