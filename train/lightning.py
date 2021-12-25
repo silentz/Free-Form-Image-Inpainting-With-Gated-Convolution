@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 
@@ -9,6 +10,7 @@ from typing import Any, Dict, List
 
 from src.collate import collate_fn, Batch
 from src.models import Generator, Discriminator
+from src.loss import recon_loss
 
 
 class DataModule(pl.LightningDataModule):
@@ -60,7 +62,39 @@ class Module(pl.LightningModule):
         return [dis_optim, gen_optim]
 
     def training_step(self, batch: Batch, batch_idx: int, optimizer_idx: int) -> Dict[str, Any]:
-        pass
+        images = batch.images
+        masks = batch.masks
+
+        X_coarse, X_recon, _ = self.generator(images, masks)
+        X_complete = X_recon * masks + images * (1 - masks)
+
+        if optimizer_idx == 0:
+            X_real = self.discriminator(images, masks)
+            X_fake = self.discriminator(X_complete, masks)
+
+            real_loss = torch.mean(F.relu(1 - X_real))
+            fake_loss = torch.mean(F.relu(1 + X_fake))
+            loss = real_loss + fake_loss
+
+            self.log('disc_real_loss', real_loss.item())
+            self.log('disc_fake_loss', fake_loss.item())
+            self.log('disc_all_loss', loss.item())
+            return {'loss': loss}
+
+        elif optimizer_idx == 1:
+            X_fake = self.discriminator(X_complete, masks)
+
+            gen_loss = -1 * torch.mean(X_fake)
+            rec_loss = recon_loss(images, X_coarse, X_recon, masks)
+            loss = gen_loss + rec_loss
+
+            self.log('gen_gan_loss', gen_loss.item())
+            self.log('gen_rec_loss', rec_loss.item())
+            self.log('gen_all_loss', loss.item())
+            return {'loss': loss}
+
+        else:
+            raise ValueError('unknown optimizer')
 
     def validation_step(self, batch: Batch, batch_idx: int) -> Dict[str, Any]:
         pass
