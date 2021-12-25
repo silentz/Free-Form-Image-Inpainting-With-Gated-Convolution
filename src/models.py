@@ -121,7 +121,6 @@ class Generator(nn.Module):
             -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # preprocess
         image = self._normalize(image)
-        mask  = mask.unsqueeze(dim=1)
         masked_image = image * (1 - mask) + mask
 
         # stage 1
@@ -172,6 +171,5 @@ class Discriminator(nn.Module):
 
     def forward(self, image: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         image = self._normalize(image)
-        mask  = mask.unsqueeze(dim=1)
         X = torch.cat([image, mask], dim=1)
         return self._layers(X)
