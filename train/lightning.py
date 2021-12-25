@@ -95,7 +95,40 @@ class Module(pl.LightningModule):
             raise ValueError('unknown optimizer')
 
     def validation_step(self, batch: Batch, batch_idx: int) -> Dict[str, Any]:
-        pass
+        images = batch.images
+        masks = batch.masks.unsqueeze(dim=1)
 
-    def validation_epoch_end(self, outputs: List[Dict[str, Any]]) -> None:
-        pass
+        X_coarse, X_recon, _ = self.generator(images, masks)
+        X_complete = X_recon * masks + images * (1 - masks)
+
+        return {
+                'origin': images.float().detach().cpu(),
+                'mask': masks.detach().cpu(),
+                'coarse': X_coarse.detach().cpu(),
+                'complete': X_complete.detach().cpu(),
+            }
+
+    def validation_epoch_end(self, outputs: List[Dict[str, Any]]):
+        n_batches = len(outputs)
+        columns = ['origin', 'mask', 'coarse', 'complete']
+        table = wandb.Table(columns=columns)
+
+        for idx in range(n_batches):
+            origins = outputs[idx]['origin']
+            masks = outputs[idx]['mask']
+            coarses = outputs[idx]['coarse']
+            completes = outputs[idx]['complete']
+
+            iterator = zip(origins, masks, coarses, completes)
+
+            for origin, mask, coarse, complete in iterator:
+                table.add_data(
+                        wandb.Image(origin),
+                        wandb.Image(mask),
+                        wandb.Image(coarse),
+                        wandb.Image(complete),
+                    )
+
+        current_epoch = self.current_epoch
+        metrics = {f'samples_{current_epoch:02d}': table}
+        self.logger.log_metrics(metrics)
