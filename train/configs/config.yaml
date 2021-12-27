@@ -4,11 +4,11 @@ trainer:
   gpus: 1
   callbacks: null
   accumulate_grad_batches: null
-  max_epochs: 50
+  max_epochs: 10
   val_check_interval: 1000
   precision: 16
   num_sanity_val_steps: 2
-  limit_val_batches: 4
+  limit_val_batches: 2
   deterministic: false
   auto_lr_find: false
   callbacks:
@@ -35,7 +35,7 @@ data:
     init_args:
       root: data/
       split: train
-  train_batch_size: 4
+  train_batch_size: 16
   train_num_workers: 16
 
   val_dataset:

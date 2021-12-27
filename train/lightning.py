@@ -53,46 +53,53 @@ class Module(pl.LightningModule):
 
         self.generator = Generator()
         self.discriminator = Discriminator()
+        self.automatic_optimization = False
 
     def configure_optimizers(self) -> List[torch.optim.Optimizer]:
         gen_optim = torch.optim.Adam(self.generator.parameters(), lr=self.gen_optimizer_lr)
         dis_optim = torch.optim.Adam(self.discriminator.parameters(), lr=self.dis_optimizer_lr)
         return [dis_optim, gen_optim]
 
-    def training_step(self, batch: Batch, batch_idx: int, optimizer_idx: int) -> Dict[str, Any]:
+    def training_step(self, batch: Batch, batch_idx: int) -> Dict[str, Any]:
+        dis_optim, gen_optim = self.optimizers()
         images = batch.images
         masks = batch.masks.unsqueeze(dim=1)
 
         X_coarse, X_recon, _ = self.generator(images, masks)
         X_complete = X_recon * masks + images * (1 - masks)
 
-        if optimizer_idx == 0:
-            X_real = self.discriminator(images, masks)
-            X_fake = self.discriminator(X_complete, masks)
+        # discriminator step
+        X_disc_input = torch.cat([images, X_complete.detach()], dim=0)
+        X_disc_masks = torch.cat([masks, masks], dim=0)
+        X_disc_out = self.discriminator(X_disc_input, X_disc_masks)
+        X_real, X_fake = torch.chunk(X_disc_out, chunks=2, dim=0)
 
-            real_loss = torch.mean(F.relu(1 - X_real))
-            fake_loss = torch.mean(F.relu(1 + X_fake))
-            loss = real_loss + fake_loss
+        dis_real_loss = torch.mean(F.relu(1 - X_real))
+        dis_fake_loss = torch.mean(F.relu(1 + X_fake))
+        dis_loss = dis_real_loss + dis_fake_loss
 
-            self.log('disc_real_loss', real_loss.item())
-            self.log('disc_fake_loss', fake_loss.item())
-            self.log('disc_all_loss', loss.item())
-            return {'loss': loss}
+        dis_optim.zero_grad()
+        gen_optim.zero_grad()
+        self.manual_backward(dis_loss, retain_graph=True)
+        dis_optim.step()
 
-        elif optimizer_idx == 1:
-            X_fake = self.discriminator(X_complete, masks)
+        # generator step
+        X_fake = self.discriminator(X_complete, masks)
+        gen_gan_loss = -1 * torch.mean(X_fake)
+        gen_rec_loss = recon_loss(images, X_coarse, X_recon, masks)
+        gen_loss = gen_gan_loss + gen_rec_loss
 
-            gen_loss = -1 * torch.mean(X_fake)
-            rec_loss = recon_loss(images, X_coarse, X_recon, masks)
-            loss = gen_loss + rec_loss
+        gen_optim.zero_grad()
+        dis_optim.zero_grad()
+        self.manual_backward(gen_loss)
+        gen_optim.step()
 
-            self.log('gen_gan_loss', gen_loss.item())
-            self.log('gen_rec_loss', rec_loss.item())
-            self.log('gen_all_loss', loss.item())
-            return {'loss': loss}
-
-        else:
-            raise ValueError('unknown optimizer')
+        self.log('gen_gan_loss', gen_loss.item())
+        self.log('gen_rec_loss', gen_rec_loss.item())
+        self.log('gen_all_loss', gen_loss.item())
+        self.log('disc_real_loss', dis_real_loss.item())
+        self.log('disc_fake_loss', dis_fake_loss.item())
+        self.log('disc_all_loss', dis_loss.item())
 
     def validation_step(self, batch: Batch, batch_idx: int) -> Dict[str, Any]:
         images = batch.images
