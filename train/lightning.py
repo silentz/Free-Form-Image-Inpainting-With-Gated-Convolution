@@ -102,10 +102,10 @@ class Module(pl.LightningModule):
         X_complete = X_recon * masks + images * (1 - masks)
 
         return {
-                'origin': images.float().detach().cpu(),
-                'mask': masks.detach().cpu(),
-                'coarse': X_coarse.detach().cpu(),
-                'complete': X_complete.detach().cpu(),
+                'origin': images.detach().cpu().to(torch.float32),
+                'mask': masks.detach().cpu().to(torch.float32),
+                'coarse': X_coarse.detach().cpu().to(torch.float32),
+                'complete': X_complete.detach().cpu().to(torch.float32),
             }
 
     def validation_epoch_end(self, outputs: List[Dict[str, Any]]):

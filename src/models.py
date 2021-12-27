@@ -81,21 +81,7 @@ class Generator(nn.Module):
                             kernel_size=3, padding='same'),
                 GatedConv2d(in_channels=4 * self._channels, out_channels=4 * self._channels,
                             kernel_size=3, padding='same'),
-            )
-
-        self._refine_dltd = nn.Sequential(
                 GatedConv2d(in_channels=4 * self._channels, out_channels=4 * self._channels,
-                            kernel_size=3, dilation=2, padding='same'),
-                GatedConv2d(in_channels=4 * self._channels, out_channels=4 * self._channels,
-                            kernel_size=3, dilation=4, padding='same'),
-                GatedConv2d(in_channels=4 * self._channels, out_channels=4 * self._channels,
-                            kernel_size=3, dilation=8, padding='same'),
-                GatedConv2d(in_channels=4 * self._channels, out_channels=4 * self._channels,
-                            kernel_size=3, dilation=16, padding='same'),
-            )
-
-        self._refine_tail = nn.Sequential(
-                GatedConv2d(in_channels=8 * self._channels, out_channels=4 * self._channels,
                             kernel_size=3, padding='same'),
                 GatedConv2d(in_channels=4 * self._channels, out_channels=4 * self._channels,
                             kernel_size=3, padding='same'),
@@ -134,11 +120,7 @@ class Generator(nn.Module):
         X_refine_head = self._refine_head(X_refine_input)
         X_refine_attn, attn_map = self._refine_attn(X_refine_head)
         X_refine_attn = self._refine_attn_tail(X_refine_attn)
-        X_refine_dltd = self._refine_dltd(X_refine_head)
-
-        X_refine_tail_input = torch.cat([X_refine_attn, X_refine_dltd], dim=1)
-        X_refine = self._refine_tail(X_refine_tail_input)
-        X_refine = torch.clamp(X_refine, -1, 1)
+        X_refine = torch.clamp(X_refine_attn, -1, 1)
 
         return self._denormalize(X_coarse), self._denormalize(X_refine), attn_map
 
