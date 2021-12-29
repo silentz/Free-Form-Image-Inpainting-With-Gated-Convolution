@@ -12,7 +12,6 @@ class GatedConv2d(nn.Module):
                        stride: Union[int, Tuple[int, int]] = 1,
                        padding: Union[int, str, Tuple[int, int]] = 0,
                        dilation: Union[int, Tuple[int, int]] = 1,
-                       batch_norm: bool = True,
                        activation: nn.Module = nn.LeakyReLU(negative_slope=0.2),
                 ):
         super().__init__()
@@ -44,7 +43,6 @@ class GatedConv2d(nn.Module):
             )
 
         self._activation = activation if (activation is not None) else (lambda x: x)
-        self._batch_norm_flag = batch_norm
 
         for module in self.modules():
             if isinstance(module, nn.Conv2d):
@@ -54,11 +52,8 @@ class GatedConv2d(nn.Module):
         image_out = self._image_conv(input)
         mask_out = self._mask_conv(input)
         gated_out = self._activation(image_out) * torch.sigmoid(mask_out)
-
-        if self._batch_norm_flag:
-            gated_out = self._batch_norm(gated_out)
-
-        return gated_out
+        residual_out = gated_out + input
+        return residual_out
 
 
 class GatedUpsampleConv2d(GatedConv2d):
