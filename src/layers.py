@@ -38,10 +38,6 @@ class GatedConv2d(nn.Module):
                 bias=True,
             )
 
-        self._batch_norm = nn.BatchNorm2d(
-                num_features=out_channels,
-            )
-
         self._activation = activation if (activation is not None) else (lambda x: x)
 
         for module in self.modules():
@@ -52,8 +48,7 @@ class GatedConv2d(nn.Module):
         image_out = self._image_conv(input)
         mask_out = self._mask_conv(input)
         gated_out = self._activation(image_out) * torch.sigmoid(mask_out)
-        residual_out = gated_out + input
-        return residual_out
+        return gated_out
 
 
 class GatedUpsampleConv2d(GatedConv2d):

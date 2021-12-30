@@ -56,6 +56,7 @@ class Generator(nn.Module):
                 # hw 256
                 GatedUpsampleConv2d(in_channels=2 * self._channels, out_channels=3,
                                     kernel_size=3, padding='same', activation=None),
+                nn.Tanh(),
             )
 
         self._refine_head = nn.Sequential(
@@ -95,6 +96,7 @@ class Generator(nn.Module):
                 # hw 256
                 GatedUpsampleConv2d(in_channels=2 * self._channels, out_channels=3,
                                     kernel_size=3, padding='same', activation=None),
+                nn.Tanh(),
             )
 
     def _normalize(self, input: torch.Tensor) -> torch.Tensor:
@@ -112,15 +114,13 @@ class Generator(nn.Module):
         # stage 1
         X_coarse_input = torch.cat([masked_image, mask], dim=1)
         X_coarse = self._coarse_net(X_coarse_input)
-        X_coarse = torch.clamp(X_coarse, -1, 1)
 
         # stage 2
         X_refine_image = image * (1 - mask) + X_coarse * mask
         X_refine_input = torch.cat([X_refine_image, mask], dim=1)
         X_refine_head = self._refine_head(X_refine_input)
         X_refine_attn, attn_map = self._refine_attn(X_refine_head)
-        X_refine_attn = self._refine_attn_tail(X_refine_attn)
-        X_refine = torch.clamp(X_refine_attn, -1, 1)
+        X_refine = self._refine_attn_tail(X_refine_attn)
 
         return self._denormalize(X_coarse), self._denormalize(X_refine), attn_map
 
