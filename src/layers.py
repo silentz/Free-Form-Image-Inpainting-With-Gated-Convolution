@@ -101,11 +101,12 @@ class SpectralNormConv2d(nn.Module):
 
 class SelfAttention(nn.Module):
 
-    def __init__(self, channels: int):
+    def __init__(self, channels: int, attention_map: bool = False):
         super().__init__()
 
         self._in_channels  = channels
         self._out_channels = channels // 8
+        self._attn_map = attention_map
 
         self._conv_query = nn.Conv2d(
                 in_channels=self._in_channels,
@@ -154,4 +155,8 @@ class SelfAttention(nn.Module):
 
         # gamma parameter
         output = self._gamma * result + input
+
+        if not self._attn_map:
+            return output
+
         return output, attention

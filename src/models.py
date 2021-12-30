@@ -59,7 +59,7 @@ class Generator(nn.Module):
                 nn.Tanh(),
             )
 
-        self._refine_head = nn.Sequential(
+        self._refine = nn.Sequential(
                 # hw: 256
                 GatedConv2d(in_channels=self._in_channels, out_channels=self._channels,
                             kernel_size=5, padding='same'),
@@ -73,11 +73,10 @@ class Generator(nn.Module):
                             kernel_size=4, padding=1, stride=2),
                 GatedConv2d(in_channels=self._channels * 3, out_channels=self._channels * 3,
                             kernel_size=3, padding='same'),
-            )
 
-        self._refine_attn = SelfAttention(channels=self._channels * 3)
+                # attention
+                SelfAttention(channels=self._channels * 3),
 
-        self._refine_attn_tail = nn.Sequential(
                 GatedConv2d(in_channels=3 * self._channels, out_channels=3 * self._channels,
                             kernel_size=3, padding='same'),
                 GatedConv2d(in_channels=3 * self._channels, out_channels=3 * self._channels,
@@ -106,10 +105,10 @@ class Generator(nn.Module):
         return (input * 127.5) + 127.5
 
     def forward(self, image: torch.Tensor, mask: torch.Tensor) \
-            -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            -> Tuple[torch.Tensor, torch.Tensor]:
         # preprocess
         image = self._normalize(image)
-        masked_image = image * (1 - mask) + mask
+        masked_image = image * (1 - mask)
 
         # stage 1
         X_coarse_input = torch.cat([masked_image, mask], dim=1)
@@ -118,11 +117,9 @@ class Generator(nn.Module):
         # stage 2
         X_refine_image = image * (1 - mask) + X_coarse * mask
         X_refine_input = torch.cat([X_refine_image, mask], dim=1)
-        X_refine_head = self._refine_head(X_refine_input)
-        X_refine_attn, attn_map = self._refine_attn(X_refine_head)
-        X_refine = self._refine_attn_tail(X_refine_attn)
+        X_refine = self._refine(X_refine_input)
 
-        return self._denormalize(X_coarse), self._denormalize(X_refine), attn_map
+        return self._denormalize(X_coarse), self._denormalize(X_refine)
 
 
 class Discriminator(nn.Module):
