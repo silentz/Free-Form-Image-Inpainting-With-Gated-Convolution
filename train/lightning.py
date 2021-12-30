@@ -65,7 +65,7 @@ class Module(pl.LightningModule):
         images = batch.images
         masks = batch.masks.unsqueeze(dim=1)
 
-        X_coarse, X_recon, _ = self.generator(images, masks)
+        X_coarse, X_recon = self.generator(images, masks)
         X_complete = X_recon * masks + images * (1 - masks)
 
         # discriminator step
@@ -79,7 +79,6 @@ class Module(pl.LightningModule):
         dis_loss = dis_real_loss + dis_fake_loss
 
         dis_optim.zero_grad()
-        gen_optim.zero_grad()
         self.manual_backward(dis_loss, retain_graph=True)
         dis_optim.step()
 
@@ -90,7 +89,6 @@ class Module(pl.LightningModule):
         gen_loss = gen_gan_loss + gen_rec_loss
 
         gen_optim.zero_grad()
-        dis_optim.zero_grad()
         self.manual_backward(gen_loss)
         gen_optim.step()
 
@@ -105,7 +103,7 @@ class Module(pl.LightningModule):
         images = batch.images
         masks = batch.masks.unsqueeze(dim=1)
 
-        X_coarse, X_recon, _ = self.generator(images, masks)
+        X_coarse, X_recon = self.generator(images, masks)
         X_complete = X_recon * masks + images * (1 - masks)
 
         return {
